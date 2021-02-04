@@ -200,7 +200,8 @@ namespace CreditsWindowsForms
             this.cbTableToEdit.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cbTableToEdit.FormattingEnabled = true;
             this.cbTableToEdit.Items.AddRange(new object[] {
-            "Банки"});
+            "Банки",
+            "Филиалы банков"});
             this.cbTableToEdit.Location = new System.Drawing.Point(39, 3);
             this.cbTableToEdit.Name = "cbTableToEdit";
             this.cbTableToEdit.Size = new System.Drawing.Size(121, 21);
