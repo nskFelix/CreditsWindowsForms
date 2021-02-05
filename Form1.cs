@@ -12,12 +12,7 @@ namespace CreditsWindowsForms
         public static string conncetionString = @"Data Source=WORKNOTEBOOK\SQLEXPRESS;Initial Catalog=Credits;Integrated Security=True";
         public static SqlConnection sqlConnection = new SqlConnection(conncetionString);
         SqlDataReader sqlReader = null;
-        SqlDataAdapter dataAdapter;
         SqlCommand command = null;
-        SimpleTable banks = new SimpleTable("Bank");
-        SimpleTable BankDevisions = new SimpleTable("BankDevision");
-        SimpleTable registrationMethods = new SimpleTable("RegistrationMethod");
-
 
         class SimpleRow
         {
@@ -36,10 +31,10 @@ namespace CreditsWindowsForms
 
         class SimpleTable
         {
-            private List<SimpleRow> items = new List<SimpleRow>();
-            private List<string> iDs = new List<string>();
-            private List<string> names = new List<string>();
-            private string tableBD;
+            private readonly List<SimpleRow> items = new List<SimpleRow>();
+            private readonly List<string> iDs = new List<string>();
+            private readonly List<string> names = new List<string>();
+            private readonly string tableBD;
 
             public List<SimpleRow> Items { get => items;}
             public List<string> IDs { get => iDs; }
@@ -95,14 +90,10 @@ namespace CreditsWindowsForms
             }
         }
 
-        public void UpdateSimpleTables()
-        {
-            foreach (SimpleTable i in SimpleTable.Objects)
-            {
-                i.Update();
-            }
-        }
 
+        /*
+         * Методы для создания столбцов в DataGridView разных видов, используя разные форматы для этих видов
+         */
         DataGridViewTextBoxColumn CreateColumnID()
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
@@ -117,18 +108,21 @@ namespace CreditsWindowsForms
             });
             return column;
         }
-
-        DataGridViewTextBoxColumn CreateColumnName()
+        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader)
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
             {
-                Name = "Name",
-                HeaderText = "Название",
-                Width = 250
+                Name = columnName,
+                HeaderText = columnHeader,
             });
             return column;
         }
-
+        DataGridViewTextBoxColumn CreateColumnText()
+        {
+            DataGridViewTextBoxColumn column = CreateColumnText("Name", "Название");
+            column.Width = 250;
+           return column;
+        }
         DataGridViewComboBoxColumn CreateColumnCombobox(string columnName, string columnHeader, SimpleTable t)
         {
             DataGridViewComboBoxColumn column = (new DataGridViewComboBoxColumn
@@ -144,20 +138,258 @@ namespace CreditsWindowsForms
             });
             return column;
         }
+        DataGridViewCheckBoxColumn CreateColumnCheckBox(string columnName, string columnHeader)
+        {
+            DataGridViewCheckBoxColumn column = (new DataGridViewCheckBoxColumn
+            {
+                Name = columnName,
+                HeaderText = columnHeader,
+                IndeterminateValue = false
+            }); ;
+            return column;
+        }
+
+
+
+        /*
+         * Создание структуры DataGridView под данные из БД, и заполнение этими данными, 
+         * колонки содержащие ID из других таблиц заменяются на соответсвующие им значения из им таблиц 
+         * для корректной работы замещенные столбцы создаются с типом ComboBoxColumn, в качестве источника данных для таких столбцов 
+         * используется класс SimpleTable 
+         */
+        private void ConstructDataGridView(DataGridView dataGridView, string TableName)
+        {
+            // создание структуры БД
+                SqlCommand cmd = new SqlCommand($"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}'", sqlConnection);
+                sqlConnection.Open();
+                var reader = cmd.ExecuteReader();
+                var lst = new List<string>();
+                {
+
+                    while (reader.Read())
+                    {
+                        lst.Add((string)reader[0]);
+                    }
+                }
+                sqlConnection.Close();
+                dataGridView.Columns.Clear();
+                var simpleTableCollection = new SimpleTable[lst.Count];
+                foreach (var i in lst)
+                {
+                    switch (i)
+                    {
+                        case "ID":
+                            { dataGridView.Columns.Add(CreateColumnID()); break; }
+                        case "Name":
+                            { dataGridView.Columns.Add(CreateColumnText()); break; }
+                        default:
+                        { 
+                            if (i.Contains("ID"))
+                            {
+                               string x=i.TrimEnd(new Char[] { 'I', 'D' });
+                                SimpleTable sourse = new SimpleTable(x);
+                                dataGridView.Columns.Add(CreateColumnCombobox(i, x, sourse));
+                                simpleTableCollection[dataGridView.Columns.Count - 1] = sourse;
+                                
+                            }
+                            else if (i.StartsWith("Is"))
+                            {
+                                dataGridView.Columns.Add(CreateColumnCheckBox(i,i));
+                            }
+                            else
+                            {
+                                dataGridView.Columns.Add(CreateColumnText(i, i));
+
+                            }
+                            
+                            
+                            
+                            break; 
+                        }
+
+                    }
+
+                }
+
+            // Заполнение созданной таблицы данными из БД
+            sqlConnection.Open();
+            SqlCommand sqlCommand = new SqlCommand($"SELECT * FROM {TableName} ORDER BY ID", sqlConnection);
+            //try
+            //{
+
+                sqlReader = sqlCommand.ExecuteReader();
+                while (sqlReader.Read())
+                {
+                    List<string> parametrs = new List<string>();
+                    for (int i = 0; i < dataGridView.ColumnCount; i++)
+                    {
+                        if (dataGridView.Columns[i].Name.Contains("ID") && (dataGridView.Columns[i].Name != "ID"))
+                        {
+                            int indexID =  simpleTableCollection[i].Items.FindIndex(x => x.Id == sqlReader[dataGridView.Columns[i].Name].ToString());
+                            parametrs.Add(simpleTableCollection[i].Items[indexID].Name);
+                        }
+                        else if (dataGridView.Columns[i].Name.StartsWith("Is"))
+                        {
+                            parametrs.Add(sqlReader[dataGridView.Columns[i].Name].ToString());
+                        }
+                        else
+                        {
+                            parametrs.Add(sqlReader[dataGridView.Columns[i].Name].ToString());
+                        }
+                    }
+                    dataGridView.Rows.Add(parametrs.ToArray());
+                }
+                sqlReader.Close();
+
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            //}
+
+            sqlConnection.Close();
+
+        }
+
+        /*
+       * Сохранение данных из DataGridView в БД,  
+       * колонки содержащие имена из других таблиц заменяются на соответсвующие им значения ID  
+       * замещенные столбцы имеют тип ComboBoxColumn,  
+       * для буфера ID и Name используется класс SimpleTable 
+       * List baseID создаётся для отслеживания совпадений ID в DataGridView и БД
+       * Если совпадение есть, то используется UPDATE, 
+       * если ID есть только в БД, то используется DELETE
+       * для новых строк в DataGridView ID имеет значение null, для корректной работы таким строкам присваивается ID=""
+       */
+        private bool SaveDataFromDataGridViewToDB(DataGridView dataGridView, string TableName)
+        {
+            try
+            {
+                sqlReader = null;
+                command = null;
+                List<string> baseID = new SimpleTable(TableName).IDs;
+
+
+
+                //проход по строкам в DataGridView
+                foreach (DataGridViewRow row in dataGridView.Rows)
+                {
+                    if (!row.IsNewRow)
+                    {
+                        List<string> values = new List<string>();
+                        List<string> parametrs = new List<string>();
+                        //Форматирование данных в DataGridView
+                        for (int c = 0; c < dataGridView.Columns.Count; c++)
+                        {
+                            if (dgEditDB.Columns[c].GetType() == new DataGridViewCheckBoxColumn().GetType())
+                            {
+                                if (row.Cells[c].Value == null)
+                                { row.Cells[c].Value = false; }
+                            }
+                            if (row.Cells[c].Value == null && c != 0)
+                            {
+                                MessageBox.Show("Обнаружены незаполненные ячейки");
+                                return false;
+                            }
+                            else if (row.Cells[c].Value == null)
+                            {
+                                values.Add("");
+                            }
+                            else if (dgEditDB.Columns[c].GetType() == new DataGridViewComboBoxColumn().GetType())
+                            {
+                                SimpleTable table = new SimpleTable(dataGridView.Columns[c].HeaderText);
+                                int k = table.Items.FindIndex(x => x.Name == row.Cells[c].Value.ToString());
+                                values.Add(table.Items[k].Id);
+                            }
+
+                            else
+                            {
+                                values.Add(row.Cells[c].Value.ToString().Replace(',','.'));
+                            }
+
+
+
+                            parametrs.Add(dataGridView.Columns[c].Name);
+
+
+                        }
+                        sqlConnection.Open();
+
+
+                        // изменение текущих или внесение новых данных в БД
+                        if (baseID.Contains(values[0]))
+                        {
+                            //command = new SqlCommand($@"UPDATE Bank SET Name='{name}' WHERE ID={id}", sqlConnection);
+                            command = new SqlCommand(UPDATE_COMMAND(parametrs, values, TableName), sqlConnection);
+                            baseID.Remove(values[0]);
+                        }
+                        else
+                        {
+                            command = new SqlCommand(INSERT_COMMAND(values, TableName), sqlConnection);
+                        }
+                        sqlReader = command.ExecuteReader();
+                        sqlReader.Close();
+                        sqlConnection.Close();
+                    }
+                }
+
+                //Удаление строк найденых в БД, но отсутствующих в DataGridView
+                sqlConnection.Open();
+                foreach (string id in baseID)
+                {
+                    command = new SqlCommand($@"DELETE FROM {TableName}  
+                                                            WHERE ID={id}",
+                                                        sqlConnection);
+
+                    sqlReader = command.ExecuteReader();
+                    sqlReader.Close();
+                }
+
+
+                sqlConnection.Close();
+                ConstructDataGridView(dataGridView, TableName);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                sqlConnection.Close();
+                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
 
         public Form1()
         {
             InitializeComponent();
-            cbTableToEdit.SelectedIndex = 0;
             dgEditDB.AutoGenerateColumns = false;
-        }
+            // Загрузка списка доступных для редактирования таблиц в БД 
+            {
+                cbTableToEdit.Items.Clear();
+                SqlCommand cmd = new SqlCommand($"SELECT TABLE_NAME FROM Credits.INFORMATION_SCHEMA.TABLES", sqlConnection);
+                sqlConnection.Open();
+                var reader = cmd.ExecuteReader();
+                var lst = new List<string>();
+                {
 
+                    while (reader.Read())
+                    {
+                        lst.Add((string)reader[0]);
+                    }
+                }
+                sqlConnection.Close();
+                lst.Remove("sysdiagrams");
+                lst.Remove("Source_Of_Income");
+                lst.Remove("Income");
+                cbTableToEdit.Items.AddRange(lst.ToArray());
+                cbTableToEdit.SelectedIndex = 0;
+            }
+        }
+        //закгрузка окна
         private void Form1_Load(object sender, EventArgs e)
         {
-            BankFill();
         }
-
-
+        // Закрытие окна
         private void CloseToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.Close();
@@ -167,15 +399,7 @@ namespace CreditsWindowsForms
         private  void OpenTableButton_Click(object sender, EventArgs e)
         {
             string tableToEdit = cbTableToEdit.SelectedItem.ToString();
-            
-            switch (tableToEdit)
-            {
-                case "Банки":
-                    { LoadBanksTodgEditDB(); break; }
-                case "Филиалы банков":
-                    { LoadBankDevisionTodgEditDB(); break; }
-                default: break;
-            }
+            ConstructDataGridView(dgEditDB, tableToEdit);
             saveTableButton.Enabled = false;
             cbTableToEdit.Enabled = true;
             openTableButton.Text = "Открыть";
@@ -185,15 +409,7 @@ namespace CreditsWindowsForms
         private void SaveTableButton_Click(object sender, EventArgs e)
         {
             string tableToEdit = cbTableToEdit.SelectedItem.ToString();
-            bool saved = false;
-            switch (tableToEdit)
-            {
-                case "Банки":
-                    { saved = SaveBankFromdgEditDB(); break; }
-                case "Филиалы банков":
-                    { saved = SaveBankDevisionFromdgEditDB(); break; }
-                default: break;
-            }
+            bool saved = SaveDataFromDataGridViewToDB(dgEditDB, tableToEdit);
             if (saved)
             {
                 saveTableButton.Enabled = false;
@@ -210,148 +426,37 @@ namespace CreditsWindowsForms
             openTableButton.Text = "Отмена";
         }
 
-        //сохранение таблицы "Банки" в БД 
-        private bool SaveBankFromdgEditDB()
+
+        /*
+         * Методы для создания SQL команд 
+         */
+        string INSERT_COMMAND(List<String> Values, string TableName)
         {
-            try
+            string command = $@"INSERT INTO {TableName} VALUES (";
+            if (Values.Count > 2)
             {
-                banks.Update();
-                sqlConnection.Open();
-                sqlReader = null;
-                command=null;
-
-                //Получение индеков, которые были в базе до сохранения
-                List<string> baseID = banks.IDs;              
-
-
-           //перенос данных из DataGridView в БД
-                foreach (DataGridViewRow i in dgEditDB.Rows)
+                for (int i = 1; i < Values.Count - 1; i++)
                 {
-                    if (!i.IsNewRow)
-                    {
-                        string id="";
-                        
-                        if (i.Cells[0].Value!=null)
-                        id = i.Cells[0].Value.ToString(); 
-
-                        string name = i.Cells[1].Value.ToString();
-
-
-                        if (baseID.Contains(id))
-                        {
-                            command = new SqlCommand($@"UPDATE Bank SET Name='{name}' WHERE ID={id}", sqlConnection);
-                            baseID.Remove(id);
-                        }
-                        else
-                        {
-                            command = new SqlCommand($@"INSERT INTO Bank VALUES ('{name}')", sqlConnection);
-                        }
-                        sqlReader = command.ExecuteReader();
-                        sqlReader.Close();
+                    command += $@" '{Values[i]}', ";
                 }
             }
+            command += $@"'{Values[Values.Count-1]}') ";            
+           return command;
 
-           //Удаление строк найденых в БД, но отсутствующих в DataGridView
-                foreach (string id in baseID)
-                {
-                        command = new SqlCommand($@"DELETE FROM Bank  
-                                                            WHERE ID={id}",
-                                                            sqlConnection);
-                        
-                        sqlReader = command.ExecuteReader();
-                        sqlReader.Close();
-                }
-
-               
-                sqlConnection.Close();
-                LoadBanksTodgEditDB();
-                banks.Update();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                sqlConnection.Close();
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
         }
-
-        //сохранение таблицы "Банки" в БД 
-        private bool SaveBankDevisionFromdgEditDB()
+        string UPDATE_COMMAND(List<String> Parametrs, List<String> Values, string TableName)
         {
-            try
+            string command = $@"UPDATE {TableName} SET ";
+            if (Values.Count > 2)
             {
-                UpdateSimpleTables();
-                sqlConnection.Open();
-                sqlReader = null;
-                command = null;
-
-                //Получение индеков, которые были в базе до сохранения
-                List<string> baseID = BankDevisions.IDs;
-
-
-                //перенос данных из DataGridView в БД
-                foreach (DataGridViewRow i in dgEditDB.Rows)
+                for (int i = 1; i < Parametrs.Count - 1; i++)
                 {
-                    if (!i.IsNewRow)
-                    {
-                        string id = "";
-                        if (i.Cells[0].Value != null)
-                            id = i.Cells[0].Value.ToString();
-
-                        string name = i.Cells[1].Value.ToString();
-
-                        string bankID = "";
-                        if (i.Cells[2].Value != null)
-                            foreach (var b in banks.Items)
-                            {
-                            if (i.Cells[2].Value.ToString() == b.Name) bankID = b.Id;
-                            }
-
-                        string registrationMethodID = "";
-                        if (i.Cells[3].Value != null)
-                            foreach (var r in registrationMethods.Items)
-                            {
-                                if (i.Cells[3].Value.ToString() == r.Name) registrationMethodID = r.Id;
-                            }
-
-                        if (baseID.Contains(id))
-                        {
-                            command = new SqlCommand($@"UPDATE BankDevision SET Name = '{name}', BankID = '{bankID}', RegistrationMethodID = '{registrationMethodID}' WHERE ID={id}", sqlConnection);
-                            baseID.Remove(id);
-                        }
-                        else
-                        {
-                            command = new SqlCommand($@"INSERT INTO BankDevision VALUES ('{name}','{bankID}','{registrationMethodID}')", sqlConnection);
-                        }
-                        sqlReader = command.ExecuteReader();
-                        sqlReader.Close();
-                    }
+                    command += $@"{Parametrs[i]} = '{Values[i]}', ";
                 }
-
-                //Удаление строк найденых в БД, но отсутствующих в DataGridView
-                foreach (string id in baseID)
-                {
-                    command = new SqlCommand($@"DELETE FROM BankDevision  
-                                                            WHERE ID={id}",
-                                                        sqlConnection);
-
-                    sqlReader = command.ExecuteReader();
-                    sqlReader.Close();
-                }
-
-
-                sqlConnection.Close();
-                LoadBankDevisionTodgEditDB();
-                BankDevisions.Update();
-                return true;
             }
-            catch (Exception ex)
-            {
-                sqlConnection.Close();
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return false;
-            }
+            command += $@"{Parametrs[Parametrs.Count-1]} = '{Values[Parametrs.Count - 1]}' WHERE {Parametrs[0]} = {Values[0]}";
+            return command;
+
         }
 
 
@@ -361,86 +466,22 @@ namespace CreditsWindowsForms
 
 
 
-        //настройка столбцов DataGridView dgEditDB под ограничения таблицы "Банки" и заполнение этой таблицы данными из БД 
-        private void LoadBanksTodgEditDB()
-        {
-            //создание столбцов таблицы
-            dgEditDB.Columns.Clear();
-
-            dgEditDB.Columns.Add(CreateColumnID());
-
-            dgEditDB.Columns.Add(CreateColumnName());
-
-            sqlConnection.Open();
-            command = new SqlCommand($@"SELECT b.ID as {dgEditDB.Columns[0].Name}, 
-                                               b.Name as {dgEditDB.Columns[1].Name} 
-                                        FROM Bank as b ORDER BY b.ID", sqlConnection);
-            try
-            {
-                sqlReader = command.ExecuteReader();
-                int i = 0;
-                while (sqlReader.Read())
-                {
-                      dgEditDB.Rows.Add(
-                            sqlReader[dgEditDB.Columns[0].Name],
-                            sqlReader[dgEditDB.Columns[1].Name]);
-                }
-                sqlReader.Close();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            sqlConnection.Close();
-        }
 
 
-        //настройка столбцов DataGridView dgEditDB под ограничения таблицы "Филиалы банков" и заполнение этой таблицы данными из БД 
-        private void LoadBankDevisionTodgEditDB()
-        {
-            UpdateSimpleTables();
-
-            //создание столбцов таблицы
-            dgEditDB.Columns.Clear();
-
-            dgEditDB.Columns.Add(CreateColumnID());
-
-            dgEditDB.Columns.Add(CreateColumnName());
-
-            dgEditDB.Columns.Add(CreateColumnCombobox("BankName","Назание Банка", banks));
-
-            dgEditDB.Columns.Add(CreateColumnCombobox("RegistrationMethodsName","Метод ввода", registrationMethods));
-
-            sqlConnection.Open();
-            command = new SqlCommand($@"SELECT bd.ID as {dgEditDB.Columns[0].Name}, 
-                                               bd.Name as {dgEditDB.Columns[1].Name}, 
-                                               b.Name as {dgEditDB.Columns[2].Name}, 
-                                               reg.Name as {dgEditDB.Columns[3].Name}
-                                       FROM BankDevision as bd
-                                       JOIN Bank as b ON bd.BankID=b.ID
-                                       JOIN RegistrationMethod as reg on bd.RegistrationMethodID = reg.ID", sqlConnection);
-            try
-            {
-                sqlReader = command.ExecuteReader();
-                int i = 0;
-                while (sqlReader.Read())
-                {
-                    dgEditDB.Rows.Add(
-                        sqlReader[dgEditDB.Columns[0].Name], 
-                        sqlReader[dgEditDB.Columns[1].Name],
-                        sqlReader[dgEditDB.Columns[2].Name], 
-                        sqlReader[dgEditDB.Columns[3].Name]);
-                }
-                sqlReader.Close();
 
 
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            sqlConnection.Close();
-        }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

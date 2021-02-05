@@ -45,7 +45,6 @@ namespace CreditsWindowsForms
             this.tabEdit = new System.Windows.Forms.TabPage();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.cbTableToEdit = new System.Windows.Forms.ComboBox();
-            this.labelBank1 = new System.Windows.Forms.Label();
             this.saveTableButton = new System.Windows.Forms.Button();
             this.openTableButton = new System.Windows.Forms.Button();
             this.dgEditDB = new System.Windows.Forms.DataGridView();
@@ -184,7 +183,6 @@ namespace CreditsWindowsForms
             // splitContainer1.Panel1
             // 
             this.splitContainer1.Panel1.Controls.Add(this.cbTableToEdit);
-            this.splitContainer1.Panel1.Controls.Add(this.labelBank1);
             this.splitContainer1.Panel1.Controls.Add(this.saveTableButton);
             this.splitContainer1.Panel1.Controls.Add(this.openTableButton);
             // 
@@ -201,21 +199,12 @@ namespace CreditsWindowsForms
             this.cbTableToEdit.FormattingEnabled = true;
             this.cbTableToEdit.Items.AddRange(new object[] {
             "Банки",
-            "Филиалы банков"});
+            "Филиалы банков",
+            "Способы ввода"});
             this.cbTableToEdit.Location = new System.Drawing.Point(39, 3);
             this.cbTableToEdit.Name = "cbTableToEdit";
             this.cbTableToEdit.Size = new System.Drawing.Size(121, 21);
             this.cbTableToEdit.TabIndex = 7;
-            // 
-            // labelBank1
-            // 
-            this.labelBank1.AutoSize = true;
-            this.labelBank1.Font = new System.Drawing.Font("Microsoft Sans Serif", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.labelBank1.Location = new System.Drawing.Point(48, 59);
-            this.labelBank1.Name = "labelBank1";
-            this.labelBank1.Size = new System.Drawing.Size(79, 24);
-            this.labelBank1.TabIndex = 6;
-            this.labelBank1.Text = "БАНКИ";
             // 
             // saveTableButton
             // 
@@ -270,7 +259,6 @@ namespace CreditsWindowsForms
             this.tabControl.ResumeLayout(false);
             this.tabEdit.ResumeLayout(false);
             this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel1.PerformLayout();
             this.splitContainer1.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.splitContainer1.ResumeLayout(false);
@@ -299,7 +287,6 @@ namespace CreditsWindowsForms
         private System.Windows.Forms.DataGridView dgEditDB;
         private System.Windows.Forms.Button saveTableButton;
         private System.Windows.Forms.Button openTableButton;
-        private System.Windows.Forms.Label labelBank1;
         private System.Windows.Forms.ComboBox cbTableToEdit;
     }
 }
