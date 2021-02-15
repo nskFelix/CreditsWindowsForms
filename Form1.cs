@@ -4,6 +4,7 @@ using System.Data;
 using System.Windows.Forms;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.Globalization;
 
 namespace CreditsWindowsForms
 {
@@ -13,63 +14,165 @@ namespace CreditsWindowsForms
         public static SqlConnection sqlConnection = new SqlConnection(conncetionString);
         SqlDataReader sqlReader = null;
         SqlCommand command = null;
+        public static string noFilter = "Без ограничений";
 
-        class SimpleRow
+        /*Загрузка окна   
+         */
+        public Form1()
         {
-            private string id;
-            private string name;
+            InitializeComponent();
 
-            public SimpleRow(string id, string name)
+
+            CostNumericUpDown.Controls[0].Visible = false;
+            /* Подготовка вкладки редактирование БД 
+            * Загрузка списка доступных для редактирования таблиц в БД 
+            * Настройка стартовых параметров для компонентов на этой вкладке
+            */
             {
-                this.Id = id;
-                this.Name = name;
-            }
+                dgEditDB.AutoGenerateColumns = false;
+                cbDeleteRow.Checked = false;
+                cbTableToEdit.Items.Clear();
+                SqlCommand cmd = new SqlCommand($"SELECT TABLE_NAME FROM Credits.INFORMATION_SCHEMA.TABLES", sqlConnection);
+                sqlConnection.Open();
+                var reader = cmd.ExecuteReader();
+                var lst = new List<string>();
+                {
 
-            public string Id { get => id; set => id = value; }
-            public string Name { get => name; set => name = value; }
+                    while (reader.Read())
+                    {
+                        lst.Add((string)reader[0]);
+                    }
+                }
+                sqlConnection.Close();
+                lst.Remove("sysdiagrams");
+                lst.Remove("Source_Of_Income");
+                lst.Remove("Income");
+                cbTableToEdit.Items.AddRange(lst.ToArray());
+                cbTableToEdit.SelectedIndex = 0;
+            }
+            /* Подготовка вкладки Калькулятор 
+            * Заполнение коллекций для фильтров 
+            * Настройка стартовых параметров для компонентов на этой вкладке
+            */
+            {
+                ProductTypeCB.Items.Clear();
+                ProductTypeCB.Items.Add(noFilter);
+                ProductTypeCB.Items.Add("Кредит");
+                ProductTypeCB.Items.Add("Рассрочка");
+                bankCB.Items.Clear();
+                bankCB.Items.Add(noFilter);
+                bankCB.Items.AddRange(new SimpleTable("Bank").Names.ToArray());
+                PeriodCB.Items.Clear();
+                PeriodCB.Items.Add(noFilter);
+                PeriodCB.Items.AddRange(new SimpleTable("ProductVersion", "Period").Parametrs.ToArray());
+                //PeriodCB.Items.AddRange(new string[] { "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "30", "36" });
+                ProductTypeCB.SelectedIndex = 2;
+                bankCB.SelectedIndex = 1;
+                ProductCB.SelectedIndex = 1;
+                PeriodCB.SelectedIndex = 0;
+                CostNumericUpDown.Value = 100000;
+                calculatorDataGridView.RowHeadersVisible = false;
+            }
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            calculatorDataGridView.ClearSelection();
         }
 
+        /* класс SimpleTable используется для более удобного получения, хранения и использований различных коллекций с ID и Name 
+        * так же может использоваться для создания других коллекций с заполнением коллекции Parametrs всеми вариантами 
+        * заданного параметра в указанной таблице
+        */
         class SimpleTable
         {
             private readonly List<SimpleRow> items = new List<SimpleRow>();
             private readonly List<string> iDs = new List<string>();
             private readonly List<string> names = new List<string>();
+            private readonly List<string> parametrs = new List<string>();
             private readonly string tableBD;
+            public class SimpleRow
+            {
+                private string id;
+                private string name;
+
+                public SimpleRow(string id, string name)
+                {
+                    this.Id = id;
+                    this.Name = name;
+                }
+
+                public string Id { get => id; set => id = value; }
+                public string Name { get => name; set => name = value; }
+            }
 
             public List<SimpleRow> Items { get => items;}
             public List<string> IDs { get => iDs; }
             public List<string> Names { get => names; }
+            public List<string> Parametrs { get => names; }
 
             public static List<SimpleTable> Objects = new List<SimpleTable>();
 
-            public SimpleTable(string tableBD)
+            public SimpleTable(string tableBD, string parametr)
             {
                 this.tableBD = tableBD;
                 Objects.Add(this);
-                Update();
-            }
-
-
-            public void Update()
-            {
+                SqlCommand command = new SqlCommand($@"SELECT t.{parametr}
+                                                   FROM {tableBD} as t
+                                                   GROUP by t.{parametr}
+                                                   ORDER BY t.{parametr}",
+                                                    sqlConnection);
                 this.items.Clear();
                 this.iDs.Clear();
                 this.names.Clear();
                 sqlConnection.Open();
 
                 SqlDataReader sqlReader = null;
-                SqlCommand command = new SqlCommand($@"SELECT t.ID, t.Name
-                                                   FROM {tableBD} as t
-                                                   ORDER BY t.ID",
-                                                       sqlConnection);
 
                 try
                 {
-                    sqlReader =  command.ExecuteReader();
-                    while ( sqlReader.Read())
+                    sqlReader = command.ExecuteReader();
+                    while (sqlReader.Read())
                     {
-                        string ID = sqlReader["ID"].ToString();
-                        string Name = sqlReader["Name"].ToString();
+                        string ID = sqlReader[0].ToString();
+                        this.Parametrs.Add(ID);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    if (sqlReader != null)
+                        sqlReader.Close();
+
+                }
+                sqlConnection.Close();
+
+            }
+            public SimpleTable(string tableBD)
+            {
+                this.tableBD = tableBD;
+                Objects.Add(this);
+                SqlCommand command = new SqlCommand($@"SELECT t.ID, t.Name
+                                                   FROM {tableBD} as t
+                                                   ORDER BY t.ID",
+                                                   sqlConnection);
+                this.items.Clear();
+                this.iDs.Clear();
+                this.names.Clear();
+                sqlConnection.Open();
+
+                SqlDataReader sqlReader = null;
+
+                try
+                {
+                    sqlReader = command.ExecuteReader();
+                    while (sqlReader.Read())
+                    {
+                        string ID = sqlReader[0].ToString();
+                        string Name = sqlReader[1].ToString();
                         this.items.Add(new SimpleRow(ID, Name));
                         this.names.Add(Name);
                         this.iDs.Add(ID);
@@ -88,39 +191,54 @@ namespace CreditsWindowsForms
                 }
                 sqlConnection.Close();
             }
+
         }
 
-
-        /*
-         * Методы для создания столбцов в DataGridView разных видов, используя разные форматы для этих видов
+        /*Методы для создания столбцов в DataGridView разных видов, используя разные форматы для этих видов
          */
         DataGridViewTextBoxColumn CreateColumnID()
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
             {
-                Name = "ID",
-                HeaderText = "ID",
-                ReadOnly = true,
+                Name             = "ID",
+                HeaderText       = "ID",
+                ReadOnly         = true,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
-                    BackColor = Color.LightGray
+                    BackColor    = Color.LightGray
                 }
             });
             return column;
         }
-        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader)
+        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, int width, Color color)
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
             {
-                Name = columnName,
-                HeaderText = columnHeader,
+                Name        = columnName,
+                HeaderText  = columnHeader,
+                Width = width,
+                DefaultCellStyle = new DataGridViewCellStyle
+                {
+                    BackColor = color
+                }
             });
             return column;
+        }
+        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, Color color)
+        {
+            return CreateColumnText(columnName, columnHeader, 150, color);
+        }
+        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, int width)
+        {
+            return CreateColumnText(columnName, columnHeader, width, Color.Empty);
+        }
+        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader)
+        {
+            return CreateColumnText(columnName, columnHeader, 150, Color.Empty);
         }
         DataGridViewTextBoxColumn CreateColumnText()
         {
             DataGridViewTextBoxColumn column = CreateColumnText("Name", "Название");
-            column.Width = 250;
            return column;
         }
         DataGridViewComboBoxColumn CreateColumnCombobox(string columnName, string columnHeader, SimpleTable t)
@@ -149,10 +267,7 @@ namespace CreditsWindowsForms
             return column;
         }
 
-
-
-        /*
-         * Создание структуры DataGridView под данные из БД, и заполнение этими данными, 
+         /*Создание структуры DataGridView под данные из БД, и заполнение этими данными, 
          * колонки содержащие ID из других таблиц заменяются на соответсвующие им значения из им таблиц 
          * для корректной работы замещенные столбцы создаются с типом ComboBoxColumn, в качестве источника данных для таких столбцов 
          * используется класс SimpleTable 
@@ -189,8 +304,7 @@ namespace CreditsWindowsForms
                                string x=i.TrimEnd(new Char[] { 'I', 'D' });
                                 SimpleTable sourse = new SimpleTable(x);
                                 dataGridView.Columns.Add(CreateColumnCombobox(i, x, sourse));
-                                simpleTableCollection[dataGridView.Columns.Count - 1] = sourse;
-                                
+                                simpleTableCollection[dataGridView.Columns.Count - 1] = sourse;                                
                             }
                             else if (i.StartsWith("Is"))
                             {
@@ -199,11 +313,7 @@ namespace CreditsWindowsForms
                             else
                             {
                                 dataGridView.Columns.Add(CreateColumnText(i, i));
-
-                            }
-                            
-                            
-                            
+                            }           
                             break; 
                         }
 
@@ -214,8 +324,8 @@ namespace CreditsWindowsForms
             // Заполнение созданной таблицы данными из БД
             sqlConnection.Open();
             SqlCommand sqlCommand = new SqlCommand($"SELECT * FROM {TableName} ORDER BY ID", sqlConnection);
-            //try
-            //{
+            try
+            {
 
                 sqlReader = sqlCommand.ExecuteReader();
                 while (sqlReader.Read())
@@ -225,7 +335,9 @@ namespace CreditsWindowsForms
                     {
                         if (dataGridView.Columns[i].Name.Contains("ID") && (dataGridView.Columns[i].Name != "ID"))
                         {
-                            int indexID =  simpleTableCollection[i].Items.FindIndex(x => x.Id == sqlReader[dataGridView.Columns[i].Name].ToString());
+                            string tempID   = sqlReader[dataGridView.Columns[i].Name].ToString();
+                            int indexID     = simpleTableCollection[i].Items.FindIndex(x => x.Id == tempID);
+
                             parametrs.Add(simpleTableCollection[i].Items[indexID].Name);
                         }
                         else if (dataGridView.Columns[i].Name.StartsWith("Is"))
@@ -240,28 +352,24 @@ namespace CreditsWindowsForms
                     dataGridView.Rows.Add(parametrs.ToArray());
                 }
                 sqlReader.Close();
-
-
-            //}
-            //catch (Exception ex)
-            //{
-            //    MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-            //}
-
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
             sqlConnection.Close();
 
         }
 
-        /*
-       * Сохранение данных из DataGridView в БД,  
-       * колонки содержащие имена из других таблиц заменяются на соответсвующие им значения ID  
-       * замещенные столбцы имеют тип ComboBoxColumn,  
-       * для буфера ID и Name используется класс SimpleTable 
-       * List baseID создаётся для отслеживания совпадений ID в DataGridView и БД
-       * Если совпадение есть, то используется UPDATE, 
-       * если ID есть только в БД, то используется DELETE
-       * для новых строк в DataGridView ID имеет значение null, для корректной работы таким строкам присваивается ID=""
-       */
+        /*Сохранение данных из DataGridView в БД,  
+        * колонки содержащие имена из других таблиц заменяются на соответсвующие им значения ID  
+        * замещенные столбцы имеют тип ComboBoxColumn,  
+        * для буфера ID и Name используется класс SimpleTable 
+        * List baseID создаётся для отслеживания совпадений ID в DataGridView и БД
+        * Если совпадение есть, то используется UPDATE, 
+        * если ID есть только в БД, то используется DELETE
+        * для новых строк в DataGridView ID имеет значение null, для корректной работы таким строкам присваивается ID=""
+        */
         private bool SaveDataFromDataGridViewToDB(DataGridView dataGridView, string TableName)
         {
             try
@@ -286,7 +394,7 @@ namespace CreditsWindowsForms
                             {
                                 if (row.Cells[c].Value == null)
                                 { row.Cells[c].Value = false; }
-                            }
+                            } 
                             if (row.Cells[c].Value == null && c != 0)
                             {
                                 MessageBox.Show("Обнаружены незаполненные ячейки");
@@ -338,12 +446,19 @@ namespace CreditsWindowsForms
                 sqlConnection.Open();
                 foreach (string id in baseID)
                 {
-                    command = new SqlCommand($@"DELETE FROM {TableName}  
+                    if (cbDeleteRow.Checked)
+                    {
+                        command = new SqlCommand($@"DELETE FROM {TableName}  
                                                             WHERE ID={id}",
                                                         sqlConnection);
 
-                    sqlReader = command.ExecuteReader();
-                    sqlReader.Close();
+                        sqlReader = command.ExecuteReader();
+                        sqlReader.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Удаление строк запрещено");
+                    }
                 }
 
 
@@ -359,43 +474,15 @@ namespace CreditsWindowsForms
             }
         }
 
-        public Form1()
-        {
-            InitializeComponent();
-            dgEditDB.AutoGenerateColumns = false;
-            // Загрузка списка доступных для редактирования таблиц в БД 
-            {
-                cbTableToEdit.Items.Clear();
-                SqlCommand cmd = new SqlCommand($"SELECT TABLE_NAME FROM Credits.INFORMATION_SCHEMA.TABLES", sqlConnection);
-                sqlConnection.Open();
-                var reader = cmd.ExecuteReader();
-                var lst = new List<string>();
-                {
-
-                    while (reader.Read())
-                    {
-                        lst.Add((string)reader[0]);
-                    }
-                }
-                sqlConnection.Close();
-                lst.Remove("sysdiagrams");
-                lst.Remove("Source_Of_Income");
-                lst.Remove("Income");
-                cbTableToEdit.Items.AddRange(lst.ToArray());
-                cbTableToEdit.SelectedIndex = 0;
-            }
-        }
-        //закгрузка окна
-        private void Form1_Load(object sender, EventArgs e)
-        {
-        }
-        // Закрытие окна
+        /*Закрытие окна
+         */
         private void CloseToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.Close();
         }
 
-        //кнопка открытие выбранной таблицы из БД 
+        /*элеиенты управления для редактирования БД
+         */
         private  void OpenTableButton_Click(object sender, EventArgs e)
         {
             string tableToEdit = cbTableToEdit.SelectedItem.ToString();
@@ -404,8 +491,6 @@ namespace CreditsWindowsForms
             cbTableToEdit.Enabled = true;
             openTableButton.Text = "Открыть";
         }
-        
-        //кнопка сохранение изменений DataGridView dgEditDB в БД
         private void SaveTableButton_Click(object sender, EventArgs e)
         {
             string tableToEdit = cbTableToEdit.SelectedItem.ToString();
@@ -417,7 +502,6 @@ namespace CreditsWindowsForms
                 openTableButton.Text = "Открыть";
             }
         }
-
         //обнаружены изменения в DataGridView dgEditDB 
         private void DgEditDB_CurrentCellChanged(object sender, EventArgs e)
         {
@@ -426,9 +510,7 @@ namespace CreditsWindowsForms
             openTableButton.Text = "Отмена";
         }
 
-
-        /*
-         * Методы для создания SQL команд 
+        /*создание SQL команд 
          */
         string INSERT_COMMAND(List<String> Values, string TableName)
         {
@@ -462,131 +544,234 @@ namespace CreditsWindowsForms
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        private void Button1_Click(object sender, EventArgs e)
+        private void Calculate(DataGridView dataGridView, double cost, double sum, string overpaymentFilter, string bankFilter, string productFilter, string periodFilter)
         {
-            BankFill();
-        }
+            //создание столбцов для таблицы
+             dataGridView.Columns.Clear();
+            dataGridView.Columns.Add(CreateColumnText("Period", "Срок", 70, Color.GreenYellow));
+            dataGridView.Columns.Add(CreateColumnText("Payment", "Платёж", Color.Yellow));
+            dataGridView.Columns.Add(CreateColumnText("PaymentSum", "Сумма выплат"));
+            dataGridView.Columns.Add(CreateColumnText("OverpaymentSum", "Переплата", 110));
+            dataGridView.Columns.Add(CreateColumnText("OverpaymentPercent", "Процент переплаты", 120));
+            dataGridView.Columns.Add(CreateColumnCheckBox("IsOverpayment", "Рассрочка"));
+            dataGridView.Columns.Add(CreateColumnText("LossOfPartner", "Потери организации", 110));
+            dataGridView.Columns.Add(CreateColumnText("CreditSum", "Сумма кредита", 120));
+            dataGridView.Columns.Add(CreateColumnText("Bank", "Банк", 180));
+            dataGridView.Columns.Add(CreateColumnText("Product", "Продукт", 300));
 
-        private async void BankFill()
-        {
-            bankCB.Items.Clear();
-            await sqlConnection.OpenAsync();
+            dataGridView.Columns["IsOverpayment"].Visible = false;
 
-            sqlReader = null;
-            command = new SqlCommand(@"SELECT Name 
-                                                  FROM Bank
-                                                  ORDER BY ID",
-                                                  sqlConnection);
-            try
+
+            dataGridView.ColumnHeadersDefaultCellStyle.Font = new Font("Calibri Light", 14);
+            dataGridView.DefaultCellStyle = new DataGridViewCellStyle
             {
-                sqlReader = await command.ExecuteReaderAsync();
-                while (await sqlReader.ReadAsync())
+                Padding = new Padding(5),
+                Font = new Font("Calibri Light", 14)
+
+            };
+            dataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+
+
+            string command = $@"SELECT pv.MinSum, pv.MaxSum, b.Name as Bank, p.Name as Product, pv.Period, pv.Rate, pv.LossOfPartner, pv.IsOverpayment
+                                   FROM ProductVersion as pv
+                                   JOIN Product as p ON pv.ProductID = p.ID
+                                   JOIN Bank as b ON p.BankID = b.ID
+								   WHERE pv.MinSum<={sum} and pv.MaxSum>= {sum}";
+
+            if (overpaymentFilter != noFilter)
+            {
+                bool filter = false;
+                if (overpaymentFilter == "Рассрочка") filter = true;
+                command += $" and pv.IsOverpayment = '{filter}'";
+            }
+
+            if (bankFilter != noFilter)
+            {
+                command += $" and b.Name = '{bankFilter}'";
+            }
+
+            if (productFilter != noFilter)
+            {
+                command += $" and p.Name = '{productFilter}'";
+            }
+
+            if (periodFilter != noFilter)
+            {
+                command += $" and pv.Period = '{periodFilter}'";
+            }
+
+            command += " ORDER BY pv.IsOverpayment DESC, b.ID, p.ID, pv.Period";
+
+            SqlCommand cmd = new SqlCommand(command, sqlConnection);
+            sqlConnection.Open();
+            var reader = cmd.ExecuteReader();
+            {
+
+                while (reader.Read())
                 {
-                    bankCB.Items.Add(sqlReader["Name"]);
+                    string bank = reader["Bank"].ToString();
+                    string product = reader["Product"].ToString();
+                    double period = double.Parse(reader["Period"].ToString());
+                    double rate = double.Parse(reader["Rate"].ToString());
+                    double lossOfPartner = double.Parse(reader["LossOfPartner"].ToString())/100;
+                    bool isOverpayment = Boolean.Parse(reader["IsOverpayment"].ToString());
+                    double creditSum = sum - (sum * lossOfPartner);
+                    double payment;
+                    double paymentSum;
+                    if (!isOverpayment)
+                    {
+                        payment = creditSum * ((rate / 100 / 12) / (1 - Math.Pow(1 + (rate / 100 / 12), -period)));
+                        paymentSum = payment * period;
+                    }
+                    else
+                    {
+                        payment = sum / period;
+                        paymentSum = sum;
+                    }
+                    double overpaymentSum = paymentSum - cost;
+                    double overpaymentPercent = overpaymentSum / cost;
+                    dataGridView.Rows.Add(
+                        period, 
+                        payment.ToString("C0"), 
+                        paymentSum.ToString("C0"), 
+                        overpaymentSum.ToString("C0"), 
+                        overpaymentPercent.ToString("P"),
+                        isOverpayment,
+                        lossOfPartner.ToString("P1"),
+                        creditSum.ToString("C0"),
+                        bank,
+                        product
+                        );
+
                 }
-
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (sqlReader != null)
-                    sqlReader.Close();
-
             }
             sqlConnection.Close();
+
+            List<int> mainPeriods = new List<int> { 6, 12, 24 };
+            foreach (DataGridViewRow i in dataGridView.Rows)
+            {
+                int currentPeriod = Int32.Parse(i.Cells["Period"].Value.ToString());
+                bool isCurrentOverpayment = Boolean.Parse(i.Cells["IsOverpayment"].Value.ToString());
+                if (mainPeriods.Contains(currentPeriod))
+                {
+                    i.DefaultCellStyle.Font = new Font(dataGridView.DefaultCellStyle.Font, FontStyle.Bold);
+                }
+
+                if (isCurrentOverpayment)
+                {
+                    
+                    i.Cells["CreditSum"].Style.BackColor = Color.LightBlue;
+                    i.Cells["LossOfPartner"].Style.BackColor = Color.LightBlue;
+                }
+                else
+                {
+                    i.Cells["OverpaymentSum"].Style.BackColor = Color.LightBlue;
+                    i.Cells["OverpaymentPercent"].Style.BackColor = Color.LightBlue;
+                }
+                foreach (DataGridViewCell c in i.Cells)
+                        if (dataGridView.Columns[c.ColumnIndex].DefaultCellStyle.BackColor.IsEmpty && c.Style.BackColor.IsEmpty)
+                        {
+                            c.Style.BackColor = Color.LightGray;
+                        }
+            }
+        }
+
+        private void Calculate()
+        {
+            double.TryParse(CostNumericUpDown.Value.ToString(), out double cost);
+            double.TryParse(DiscontNumericUpDown.Value.ToString(), out double discont);
+            double sum = cost - (cost * discont/100);
+            Calculate(calculatorDataGridView, cost, sum, ProductTypeCB.Text, bankCB.Text, ProductCB.Text, PeriodCB.Text); ;
+            calculatorDataGridView.ClearSelection();
+        }
+
+        private void cbDeleteRow_CheckedChanged(object sender, EventArgs e)
+        {
+            dgEditDB.AllowUserToDeleteRows = cbDeleteRow.Checked;
+        }
+
+        private void SumTB_TextChanged(object sender, EventArgs e)
+        {
+            Calculate();
+        }
+
+        private void calculatorDataGridView_SelectionChanged(object sender, EventArgs e)
+        {
             try
             {
-                bankCB.SelectedIndex = 0;
+                calculatorDataGridView.SelectedCells[0].OwningRow.Selected = true;
             }
             catch { }
         }
 
-        private async void DevisionFill(string bankName)
+       
+        private void SumNumericUpDown_KeyDown(object sender, KeyEventArgs e)
         {
-            devisionCB.Items.Clear();
-            await sqlConnection.OpenAsync();
-
-            sqlReader = null;
-            command = new SqlCommand($@"SELECT bd.Name
-                                                   FROM BankDevision as bd
-                                                   JOIN Bank as b ON b.ID=bd.BankID
-                                                   WHERE b.Name='{bankName}'",
-                                                   sqlConnection);
-
-            try
+            if (e.KeyCode == Keys.Enter)
             {
-                sqlReader = await command.ExecuteReaderAsync();
-                while (await sqlReader.ReadAsync())
-                {
-                    devisionCB.Items.Add(sqlReader["Name"]);
-                }
+                e.SuppressKeyPress = true;
 
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message.ToString(), ex.Source.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            finally
-            {
-                if (sqlReader != null)
-                    sqlReader.Close();
-
-            }
-            sqlConnection.Close();
-            try
-            {
-                devisionCB.SelectedIndex = 0;
-            }
-            catch { }
         }
 
         private void BankCB_SelectedIndexChanged(object sender, EventArgs e)
         {
-            DevisionFill(bankCB.Text.ToString());
+            ProductCB.Items.Clear();
+            ProductCB.Items.Add(noFilter);
+            ProductCB.SelectedIndex = 0;
+            if (bankCB.Text != noFilter)
+            {
+                ProductCB.Enabled = true;
+                sqlConnection.Open();
+                SqlCommand command = new SqlCommand($@"SELECT p.Name
+                                                   FROM Product as p
+                                                   JOIN Bank as b ON p.BankID = b.ID
+                                                   WHERE b.Name='{bankCB.Text}'
+                                                   ORDER BY p.ID",
+                                                   sqlConnection);
+                var reader = command.ExecuteReader();
+                var lst = new List<string>();
+
+                while (reader.Read())
+                {
+                    lst.Add((string)reader[0]);
+                }
+                sqlConnection.Close();
+                ProductCB.Items.AddRange(lst.ToArray());
+            }
+            else
+            {
+                ProductCB.Enabled = false;
+            }
+        }
+
+        private void ProductCB_SelectedIndexChanged(object sender, EventArgs e)
+        {      
+            Calculate();
+        }
+
+        private void PeriodCB_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            Calculate();
+        }
+
+        private void ProductTypeCB_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (ProductTypeCB.Text == "Рассрочка")
+            {
+                DiscontNumericUpDown.Value = 0;
+                DiscontNumericUpDown.Enabled = false;
+            }
+            else
+            {
+                DiscontNumericUpDown.Enabled = true;
+            }
+            Calculate();
+        }
+
+        private void DiscontNumericUpDown_ValueChanged(object sender, EventArgs e)
+        {
+            Calculate();
         }
     }
 }
