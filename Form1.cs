@@ -16,6 +16,7 @@ namespace CreditsWindowsForms
         SqlCommand command = null;
         public static string noFilter = "Без ограничений";
 
+        //запуск и прекращение программы 
         /*Загрузка окна   
          */
         public Form1()
@@ -79,6 +80,14 @@ namespace CreditsWindowsForms
             calculatorDataGridView.ClearSelection();
         }
 
+        /*Закрытие окна
+ */
+        private void CloseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        // новые классы и методы 
         /* класс SimpleTable используется для более удобного получения, хранения и использований различных коллекций с ID и Name 
         * так же может использоваться для создания других коллекций с заполнением коллекции Parametrs всеми вариантами 
         * заданного параметра в указанной таблице
@@ -172,7 +181,7 @@ namespace CreditsWindowsForms
                     while (sqlReader.Read())
                     {
                         string ID = sqlReader[0].ToString();
-                        string Name = sqlReader[1].ToString();
+                        string Name = (string)sqlReader[1];
                         this.items.Add(new SimpleRow(ID, Name));
                         this.names.Add(Name);
                         this.iDs.Add(ID);
@@ -196,13 +205,14 @@ namespace CreditsWindowsForms
 
         /*Методы для создания столбцов в DataGridView разных видов, используя разные форматы для этих видов
          */
-        DataGridViewTextBoxColumn CreateColumnID()
+        DataGridViewTextBoxColumn ColumnID()
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
             {
                 Name             = "ID",
                 HeaderText       = "ID",
                 ReadOnly         = true,
+                Width = 40,
                 DefaultCellStyle = new DataGridViewCellStyle
                 {
                     BackColor    = Color.LightGray
@@ -210,7 +220,7 @@ namespace CreditsWindowsForms
             });
             return column;
         }
-        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, int width, Color color)
+        DataGridViewTextBoxColumn ColumnText(string columnName, string columnHeader, int width, Color color)
         {
             DataGridViewTextBoxColumn column = (new DataGridViewTextBoxColumn
             {
@@ -224,24 +234,23 @@ namespace CreditsWindowsForms
             });
             return column;
         }
-        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, Color color)
+        DataGridViewTextBoxColumn ColumnText(string columnName, string columnHeader, Color color)
         {
-            return CreateColumnText(columnName, columnHeader, 150, color);
+            return ColumnText(columnName, columnHeader, 150, color);
         }
-        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader, int width)
+        DataGridViewTextBoxColumn ColumnText(string columnName, string columnHeader, int width)
         {
-            return CreateColumnText(columnName, columnHeader, width, Color.Empty);
+            return ColumnText(columnName, columnHeader, width, Color.Empty);
         }
-        DataGridViewTextBoxColumn CreateColumnText(string columnName, string columnHeader)
+        DataGridViewTextBoxColumn ColumnText(string columnName, string columnHeader)
         {
-            return CreateColumnText(columnName, columnHeader, 150, Color.Empty);
+            return ColumnText(columnName, columnHeader, 150, Color.Empty);
         }
-        DataGridViewTextBoxColumn CreateColumnText()
+        DataGridViewTextBoxColumn ColumnText()
         {
-            DataGridViewTextBoxColumn column = CreateColumnText("Name", "Название");
-           return column;
+            return ColumnText("Name", "Название");
         }
-        DataGridViewComboBoxColumn CreateColumnCombobox(string columnName, string columnHeader, SimpleTable t)
+        DataGridViewComboBoxColumn ColumnCombobox(string columnName, string columnHeader, SimpleTable t)
         {
             DataGridViewComboBoxColumn column = (new DataGridViewComboBoxColumn
             {
@@ -256,7 +265,7 @@ namespace CreditsWindowsForms
             });
             return column;
         }
-        DataGridViewCheckBoxColumn CreateColumnCheckBox(string columnName, string columnHeader)
+        DataGridViewCheckBoxColumn ColumnCheckBox(string columnName, string columnHeader)
         {
             DataGridViewCheckBoxColumn column = (new DataGridViewCheckBoxColumn
             {
@@ -267,6 +276,7 @@ namespace CreditsWindowsForms
             return column;
         }
 
+        //вкладка Редактирование БД
          /*Создание структуры DataGridView под данные из БД, и заполнение этими данными, 
          * колонки содержащие ID из других таблиц заменяются на соответсвующие им значения из им таблиц 
          * для корректной работы замещенные столбцы создаются с типом ComboBoxColumn, в качестве источника данных для таких столбцов 
@@ -274,45 +284,48 @@ namespace CreditsWindowsForms
          */
         private void ConstructDataGridView(DataGridView dataGridView, string TableName)
         {
+            //получение списка столбцов из БД
+            command = new SqlCommand($"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}'", sqlConnection);
+            sqlConnection.Open();
+            sqlReader = command.ExecuteReader();
+            var lst = new List<string>();
+            while (sqlReader.Read())
+            {
+                lst.Add((string)sqlReader[0]);
+            }
+            sqlConnection.Close();
+                
             // создание структуры БД
-                SqlCommand cmd = new SqlCommand($"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{TableName}'", sqlConnection);
-                sqlConnection.Open();
-                var reader = cmd.ExecuteReader();
-                var lst = new List<string>();
-                {
-
-                    while (reader.Read())
-                    {
-                        lst.Add((string)reader[0]);
-                    }
-                }
-                sqlConnection.Close();
-                dataGridView.Columns.Clear();
-                var simpleTableCollection = new SimpleTable[lst.Count];
-                foreach (var i in lst)
+            dataGridView.Columns.Clear();
+            var simpleTableCollection = new SimpleTable[lst.Count];
+            foreach (var i in lst)
                 {
                     switch (i)
                     {
                         case "ID":
-                            { dataGridView.Columns.Add(CreateColumnID()); break; }
+                            { dataGridView.Columns.Add(ColumnID()); break; }
                         case "Name":
-                            { dataGridView.Columns.Add(CreateColumnText()); break; }
+                            { dataGridView.Columns.Add(ColumnText()); break; }
                         default:
                         { 
                             if (i.Contains("ID"))
                             {
-                               string x=i.TrimEnd(new Char[] { 'I', 'D' });
+                                /* если столбец содержит ID из другой таблицы БД, то он заменяется на столбец с названием этой таблицы, 
+                                 * и создайтся класс SimpleTable хранящий  коллекции ID и NAME из указанной таблицы, этот класс так же 
+                                 * служит источником данных для создаваемого столбца типа ComboBox
+                                 */
+                                string x=i.TrimEnd(new Char[] { 'I', 'D' });
                                 SimpleTable sourse = new SimpleTable(x);
-                                dataGridView.Columns.Add(CreateColumnCombobox(i, x, sourse));
+                                dataGridView.Columns.Add(ColumnCombobox(i, x, sourse));
                                 simpleTableCollection[dataGridView.Columns.Count - 1] = sourse;                                
                             }
                             else if (i.StartsWith("Is"))
-                            {
-                                dataGridView.Columns.Add(CreateColumnCheckBox(i,i));
+                            {   
+                                dataGridView.Columns.Add(ColumnCheckBox(i,i));
                             }
                             else
                             {
-                                dataGridView.Columns.Add(CreateColumnText(i, i));
+                                dataGridView.Columns.Add(ColumnText(i, i));
                             }           
                             break; 
                         }
@@ -334,10 +347,9 @@ namespace CreditsWindowsForms
                     for (int i = 0; i < dataGridView.ColumnCount; i++)
                     {
                         if (dataGridView.Columns[i].Name.Contains("ID") && (dataGridView.Columns[i].Name != "ID"))
-                        {
-                            string tempID   = sqlReader[dataGridView.Columns[i].Name].ToString();
+                        {//замена ID из другой таблицы на соответсвующие им Name
+                            string tempID   = (string)sqlReader[dataGridView.Columns[i].Name];
                             int indexID     = simpleTableCollection[i].Items.FindIndex(x => x.Id == tempID);
-
                             parametrs.Add(simpleTableCollection[i].Items[indexID].Name);
                         }
                         else if (dataGridView.Columns[i].Name.StartsWith("Is"))
@@ -377,9 +389,6 @@ namespace CreditsWindowsForms
                 sqlReader = null;
                 command = null;
                 List<string> baseID = new SimpleTable(TableName).IDs;
-
-
-
                 //проход по строкам в DataGridView
                 foreach (DataGridViewRow row in dataGridView.Rows)
                 {
@@ -391,21 +400,21 @@ namespace CreditsWindowsForms
                         for (int c = 0; c < dataGridView.Columns.Count; c++)
                         {
                             if (dgEditDB.Columns[c].GetType() == new DataGridViewCheckBoxColumn().GetType())
-                            {
+                            {//замена значений null на false в CheckBoxColumn
                                 if (row.Cells[c].Value == null)
                                 { row.Cells[c].Value = false; }
                             } 
                             if (row.Cells[c].Value == null && c != 0)
-                            {
+                            {//поиск значений null в таблице, допускается только null в первом столбце (ID)
                                 MessageBox.Show("Обнаружены незаполненные ячейки");
                                 return false;
                             }
-                            else if (row.Cells[c].Value == null)
-                            {
+                            else if (row.Cells[c].Value == null && c == 0)
+                            {//замена null в столбце ID на пустую строку
                                 values.Add("");
                             }
                             else if (dgEditDB.Columns[c].GetType() == new DataGridViewComboBoxColumn().GetType())
-                            {
+                            {//замена названий из других таблиц на соответсвующие им ID
                                 SimpleTable table = new SimpleTable(dataGridView.Columns[c].HeaderText);
                                 int k = table.Items.FindIndex(x => x.Name == row.Cells[c].Value.ToString());
                                 values.Add(table.Items[k].Id);
@@ -415,12 +424,7 @@ namespace CreditsWindowsForms
                             {
                                 values.Add(row.Cells[c].Value.ToString().Replace(',','.'));
                             }
-
-
-
                             parametrs.Add(dataGridView.Columns[c].Name);
-
-
                         }
                         sqlConnection.Open();
 
@@ -441,7 +445,6 @@ namespace CreditsWindowsForms
                         sqlConnection.Close();
                     }
                 }
-
                 //Удаление строк найденых в БД, но отсутствующих в DataGridView
                 sqlConnection.Open();
                 foreach (string id in baseID)
@@ -460,8 +463,6 @@ namespace CreditsWindowsForms
                         MessageBox.Show("Удаление строк запрещено");
                     }
                 }
-
-
                 sqlConnection.Close();
                 ConstructDataGridView(dataGridView, TableName);
                 return true;
@@ -474,14 +475,7 @@ namespace CreditsWindowsForms
             }
         }
 
-        /*Закрытие окна
-         */
-        private void CloseToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            this.Close();
-        }
-
-        /*элеиенты управления для редактирования БД
+        /*элементы управления для редактирования БД
          */
         private  void OpenTableButton_Click(object sender, EventArgs e)
         {
@@ -502,12 +496,15 @@ namespace CreditsWindowsForms
                 openTableButton.Text = "Открыть";
             }
         }
-        //обнаружены изменения в DataGridView dgEditDB 
         private void DgEditDB_CurrentCellChanged(object sender, EventArgs e)
         {
             saveTableButton.Enabled = true;
             cbTableToEdit.Enabled = false;
             openTableButton.Text = "Отмена";
+        }
+        private void СheckBoxDeleteRow_CheckedChanged(object sender, EventArgs e)
+        {
+            dgEditDB.AllowUserToDeleteRows = cbDeleteRow.Checked;
         }
 
         /*создание SQL команд 
@@ -542,26 +539,30 @@ namespace CreditsWindowsForms
         }
 
 
+        //вкладка калькулятор
 
-
+        /* Основной метод для расчёта в кредитном калькуляторе, принимает в качестве аргументов 
+         * DatagridView, стоимость, сумму за вычетом скидки и все возможные фильтры, на основе полученных данных создаёт SQL Select,
+         * создаёт структуру таблицы, заполняет её данными из полученного запроса, и расчитывает на основе полученных данных недостающие значения
+         * на финальном этапе выделяет цветом важные колонки в зависимости от того, что за продукт расчитан в текущей строке
+        */
         private void Calculate(DataGridView dataGridView, double cost, double sum, string overpaymentFilter, string bankFilter, string productFilter, string periodFilter)
         {
             //создание столбцов для таблицы
-             dataGridView.Columns.Clear();
-            dataGridView.Columns.Add(CreateColumnText("Period", "Срок", 70, Color.GreenYellow));
-            dataGridView.Columns.Add(CreateColumnText("Payment", "Платёж", Color.Yellow));
-            dataGridView.Columns.Add(CreateColumnText("PaymentSum", "Сумма выплат"));
-            dataGridView.Columns.Add(CreateColumnText("OverpaymentSum", "Переплата", 110));
-            dataGridView.Columns.Add(CreateColumnText("OverpaymentPercent", "Процент переплаты", 120));
-            dataGridView.Columns.Add(CreateColumnCheckBox("IsOverpayment", "Рассрочка"));
-            dataGridView.Columns.Add(CreateColumnText("LossOfPartner", "Потери организации", 110));
-            dataGridView.Columns.Add(CreateColumnText("CreditSum", "Сумма кредита", 120));
-            dataGridView.Columns.Add(CreateColumnText("Bank", "Банк", 180));
-            dataGridView.Columns.Add(CreateColumnText("Product", "Продукт", 300));
+            dataGridView.Columns.Clear();
+            dataGridView.Columns.Add(ColumnText("Period", "Срок", 70, Color.GreenYellow));
+            dataGridView.Columns.Add(ColumnText("Payment", "Платёж", Color.Yellow));
+            dataGridView.Columns.Add(ColumnText("PaymentSum", "Сумма выплат"));
+            dataGridView.Columns.Add(ColumnText("OverpaymentSum", "Переплата", 110));
+            dataGridView.Columns.Add(ColumnText("OverpaymentPercent", "Процент переплаты", 120));
+            dataGridView.Columns.Add(ColumnCheckBox("IsOverpayment", "Рассрочка"));
+            dataGridView.Columns.Add(ColumnText("LossOfPartner", "Потери организации", 110));
+            dataGridView.Columns.Add(ColumnText("CreditSum", "Сумма кредита", 120));
+            dataGridView.Columns.Add(ColumnText("Bank", "Банк", 180));
+            dataGridView.Columns.Add(ColumnText("Product", "Продукт", 300));
 
+            //изменение стилей используемых в таблице
             dataGridView.Columns["IsOverpayment"].Visible = false;
-
-
             dataGridView.ColumnHeadersDefaultCellStyle.Font = new Font("Calibri Light", 14);
             dataGridView.DefaultCellStyle = new DataGridViewCellStyle
             {
@@ -571,50 +572,48 @@ namespace CreditsWindowsForms
             };
             dataGridView.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
 
-
+            // создание SQL запроса на основе фильтров
             string command = $@"SELECT pv.MinSum, pv.MaxSum, b.Name as Bank, p.Name as Product, pv.Period, pv.Rate, pv.LossOfPartner, pv.IsOverpayment
                                    FROM ProductVersion as pv
                                    JOIN Product as p ON pv.ProductID = p.ID
                                    JOIN Bank as b ON p.BankID = b.ID
 								   WHERE pv.MinSum<={sum} and pv.MaxSum>= {sum}";
-
             if (overpaymentFilter != noFilter)
             {
                 bool filter = false;
                 if (overpaymentFilter == "Рассрочка") filter = true;
                 command += $" and pv.IsOverpayment = '{filter}'";
             }
-
             if (bankFilter != noFilter)
             {
                 command += $" and b.Name = '{bankFilter}'";
             }
-
             if (productFilter != noFilter)
             {
                 command += $" and p.Name = '{productFilter}'";
             }
-
             if (periodFilter != noFilter)
             {
                 command += $" and pv.Period = '{periodFilter}'";
             }
-
             command += " ORDER BY pv.IsOverpayment DESC, b.ID, p.ID, pv.Period";
-
             SqlCommand cmd = new SqlCommand(command, sqlConnection);
+
+            //получение данных из таблицы, расчёт недостающих параметров, формирование строки таблицы
             sqlConnection.Open();
             var reader = cmd.ExecuteReader();
             {
-
                 while (reader.Read())
                 {
-                    string bank = reader["Bank"].ToString();
-                    string product = reader["Product"].ToString();
-                    double period = double.Parse(reader["Period"].ToString());
+                    // получение данных
+                    string bank = (string)reader["Bank"];
+                    string product = (string)reader["Product"];
+                    int period = (int)reader["Period"];
                     double rate = double.Parse(reader["Rate"].ToString());
                     double lossOfPartner = double.Parse(reader["LossOfPartner"].ToString())/100;
-                    bool isOverpayment = Boolean.Parse(reader["IsOverpayment"].ToString());
+                    bool isOverpayment = (bool)reader["IsOverpayment"];
+
+                    // расчёты
                     double creditSum = sum - (sum * lossOfPartner);
                     double payment;
                     double paymentSum;
@@ -630,6 +629,8 @@ namespace CreditsWindowsForms
                     }
                     double overpaymentSum = paymentSum - cost;
                     double overpaymentPercent = overpaymentSum / cost;
+
+                    //добавление новой строки в таблицу
                     dataGridView.Rows.Add(
                         period, 
                         payment.ToString("C0"), 
@@ -642,21 +643,23 @@ namespace CreditsWindowsForms
                         bank,
                         product
                         );
-
                 }
             }
             sqlConnection.Close();
 
+            //выделение важных элементов таблицы шрифтом и цветом
             List<int> mainPeriods = new List<int> { 6, 12, 24 };
             foreach (DataGridViewRow i in dataGridView.Rows)
             {
-                int currentPeriod = Int32.Parse(i.Cells["Period"].Value.ToString());
-                bool isCurrentOverpayment = Boolean.Parse(i.Cells["IsOverpayment"].Value.ToString());
+                // выделение шрифтом строк с основными вариантами срока кредита
+                int currentPeriod = (int)i.Cells["Period"].Value;
                 if (mainPeriods.Contains(currentPeriod))
                 {
                     i.DefaultCellStyle.Font = new Font(dataGridView.DefaultCellStyle.Font, FontStyle.Bold);
                 }
 
+                //выделение цветом важных ячеек в зависимости от того, является ли данная строка расчётом рассрочки или кредита
+                bool isCurrentOverpayment = (bool)i.Cells["IsOverpayment"].Value;
                 if (isCurrentOverpayment)
                 {
                     
@@ -668,6 +671,8 @@ namespace CreditsWindowsForms
                     i.Cells["OverpaymentSum"].Style.BackColor = Color.LightBlue;
                     i.Cells["OverpaymentPercent"].Style.BackColor = Color.LightBlue;
                 }
+
+                //указание цвета для наименее важных ячеек
                 foreach (DataGridViewCell c in i.Cells)
                         if (dataGridView.Columns[c.ColumnIndex].DefaultCellStyle.BackColor.IsEmpty && c.Style.BackColor.IsEmpty)
                         {
@@ -675,45 +680,24 @@ namespace CreditsWindowsForms
                         }
             }
         }
-
+        
+        /*Упрощённый вызов метода Calculate, для автоматического указания входных параметров
+         */
         private void Calculate()
         {
-            double.TryParse(CostNumericUpDown.Value.ToString(), out double cost);
-            double.TryParse(DiscontNumericUpDown.Value.ToString(), out double discont);
+            double cost = (double)CostNumericUpDown.Value;
+            double discont = (double)DiscontNumericUpDown.Value;
             double sum = cost - (cost * discont/100);
             Calculate(calculatorDataGridView, cost, sum, ProductTypeCB.Text, bankCB.Text, ProductCB.Text, PeriodCB.Text); ;
             calculatorDataGridView.ClearSelection();
         }
 
-        private void cbDeleteRow_CheckedChanged(object sender, EventArgs e)
-        {
-            dgEditDB.AllowUserToDeleteRows = cbDeleteRow.Checked;
-        }
-
+        /*События при взаимодействии с пользовательским интерфейсом на вкладке калькулятор
+         */
         private void SumTB_TextChanged(object sender, EventArgs e)
         {
             Calculate();
         }
-
-        private void calculatorDataGridView_SelectionChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                calculatorDataGridView.SelectedCells[0].OwningRow.Selected = true;
-            }
-            catch { }
-        }
-
-       
-        private void SumNumericUpDown_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.Enter)
-            {
-                e.SuppressKeyPress = true;
-
-            }
-        }
-
         private void BankCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             ProductCB.Items.Clear();
@@ -744,17 +728,14 @@ namespace CreditsWindowsForms
                 ProductCB.Enabled = false;
             }
         }
-
         private void ProductCB_SelectedIndexChanged(object sender, EventArgs e)
         {      
             Calculate();
         }
-
         private void PeriodCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             Calculate();
         }
-
         private void ProductTypeCB_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (ProductTypeCB.Text == "Рассрочка")
@@ -768,10 +749,25 @@ namespace CreditsWindowsForms
             }
             Calculate();
         }
-
         private void DiscontNumericUpDown_ValueChanged(object sender, EventArgs e)
         {
             Calculate();
+        }
+        private void SumNumericUpDown_KeyDown(object sender, KeyEventArgs e)//отключение звукового сигнала от нажатия на кнопку ENTER при вводе суммы кредита
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+
+            }
+        }
+        private void СalculatorDataGridView_SelectionChanged(object sender, EventArgs e)//выделение всей строки вместо выделения одной ячейки в таблице, удобно для быстрого зрительного анализа
+        {
+            try
+            {
+                calculatorDataGridView.SelectedCells[0].OwningRow.Selected = true;
+            }
+            catch { }
         }
     }
 }

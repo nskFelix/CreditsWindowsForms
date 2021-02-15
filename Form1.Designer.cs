@@ -354,7 +354,7 @@ namespace CreditsWindowsForms
             this.calculatorDataGridView.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
             this.calculatorDataGridView.Size = new System.Drawing.Size(1318, 509);
             this.calculatorDataGridView.TabIndex = 0;
-            this.calculatorDataGridView.SelectionChanged += new System.EventHandler(this.calculatorDataGridView_SelectionChanged);
+            this.calculatorDataGridView.SelectionChanged += new System.EventHandler(this.СalculatorDataGridView_SelectionChanged);
             // 
             // tabPage1
             // 
@@ -406,7 +406,7 @@ namespace CreditsWindowsForms
             this.cbDeleteRow.TabIndex = 1;
             this.cbDeleteRow.Text = "Удаление строк";
             this.cbDeleteRow.UseVisualStyleBackColor = true;
-            this.cbDeleteRow.CheckedChanged += new System.EventHandler(this.cbDeleteRow_CheckedChanged);
+            this.cbDeleteRow.CheckedChanged += new System.EventHandler(this.СheckBoxDeleteRow_CheckedChanged);
             // 
             // cbTableToEdit
             // 
