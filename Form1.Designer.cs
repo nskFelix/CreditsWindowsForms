@@ -1,7 +1,7 @@
 ﻿
 namespace CreditsWindowsForms
 {
-    partial class Form1
+    partial class CreditWorker
     {
         /// <summary>
         /// Обязательная переменная конструктора.
@@ -30,6 +30,7 @@ namespace CreditsWindowsForms
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(CreditWorker));
             this.bankCB = new System.Windows.Forms.ComboBox();
             this.ProductCB = new System.Windows.Forms.ComboBox();
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -62,6 +63,8 @@ namespace CreditsWindowsForms
             this.saveTableButton = new System.Windows.Forms.Button();
             this.openTableButton = new System.Windows.Forms.Button();
             this.dgEditDB = new System.Windows.Forms.DataGridView();
+            this.PartnerCB = new System.Windows.Forms.ComboBox();
+            this.PartnerLabal = new System.Windows.Forms.Label();
             this.contextMenuStrip1.SuspendLayout();
             this.menuStrip1.SuspendLayout();
             this.tabControl.SuspendLayout();
@@ -84,7 +87,7 @@ namespace CreditsWindowsForms
             // bankCB
             // 
             this.bankCB.FormattingEnabled = true;
-            this.bankCB.Location = new System.Drawing.Point(800, 15);
+            this.bankCB.Location = new System.Drawing.Point(789, 46);
             this.bankCB.Name = "bankCB";
             this.bankCB.Size = new System.Drawing.Size(121, 21);
             this.bankCB.TabIndex = 3;
@@ -93,7 +96,7 @@ namespace CreditsWindowsForms
             // ProductCB
             // 
             this.ProductCB.FormattingEnabled = true;
-            this.ProductCB.Location = new System.Drawing.Point(1004, 15);
+            this.ProductCB.Location = new System.Drawing.Point(1005, 46);
             this.ProductCB.Name = "ProductCB";
             this.ProductCB.Size = new System.Drawing.Size(121, 21);
             this.ProductCB.TabIndex = 4;
@@ -125,7 +128,7 @@ namespace CreditsWindowsForms
             this.mainToolStripMenuItem});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(1332, 24);
+            this.menuStrip1.Size = new System.Drawing.Size(1333, 24);
             this.menuStrip1.TabIndex = 4;
             this.menuStrip1.Text = "menuStrip1";
             // 
@@ -153,7 +156,7 @@ namespace CreditsWindowsForms
             this.tabControl.Location = new System.Drawing.Point(0, 24);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(1332, 606);
+            this.tabControl.Size = new System.Drawing.Size(1333, 491);
             this.tabControl.TabIndex = 5;
             // 
             // tabCalculate
@@ -162,7 +165,7 @@ namespace CreditsWindowsForms
             this.tabCalculate.Location = new System.Drawing.Point(4, 22);
             this.tabCalculate.Name = "tabCalculate";
             this.tabCalculate.Padding = new System.Windows.Forms.Padding(3);
-            this.tabCalculate.Size = new System.Drawing.Size(1324, 580);
+            this.tabCalculate.Size = new System.Drawing.Size(1325, 465);
             this.tabCalculate.TabIndex = 1;
             this.tabCalculate.Text = "Калькулятор";
             this.tabCalculate.UseVisualStyleBackColor = true;
@@ -176,6 +179,8 @@ namespace CreditsWindowsForms
             // 
             // splitContainer2.Panel1
             // 
+            this.splitContainer2.Panel1.Controls.Add(this.PartnerCB);
+            this.splitContainer2.Panel1.Controls.Add(this.PartnerLabal);
             this.splitContainer2.Panel1.Controls.Add(this.PercentLabel);
             this.splitContainer2.Panel1.Controls.Add(this.DiscontNumericUpDown);
             this.splitContainer2.Panel1.Controls.Add(this.DiscontLabel);
@@ -194,15 +199,15 @@ namespace CreditsWindowsForms
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.calculatorDataGridView);
-            this.splitContainer2.Size = new System.Drawing.Size(1318, 574);
-            this.splitContainer2.SplitterDistance = 61;
+            this.splitContainer2.Size = new System.Drawing.Size(1319, 459);
+            this.splitContainer2.SplitterDistance = 82;
             this.splitContainer2.TabIndex = 0;
             // 
             // PercentLabel
             // 
             this.PercentLabel.AutoSize = true;
             this.PercentLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.PercentLabel.Location = new System.Drawing.Point(719, 15);
+            this.PercentLabel.Location = new System.Drawing.Point(707, 46);
             this.PercentLabel.Name = "PercentLabel";
             this.PercentLabel.Size = new System.Drawing.Size(23, 20);
             this.PercentLabel.TabIndex = 13;
@@ -218,7 +223,7 @@ namespace CreditsWindowsForms
             0,
             0,
             65536});
-            this.DiscontNumericUpDown.Location = new System.Drawing.Point(654, 13);
+            this.DiscontNumericUpDown.Location = new System.Drawing.Point(643, 44);
             this.DiscontNumericUpDown.Name = "DiscontNumericUpDown";
             this.DiscontNumericUpDown.Size = new System.Drawing.Size(62, 26);
             this.DiscontNumericUpDown.TabIndex = 11;
@@ -229,7 +234,7 @@ namespace CreditsWindowsForms
             // 
             this.DiscontLabel.AutoSize = true;
             this.DiscontLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.DiscontLabel.Location = new System.Drawing.Point(583, 15);
+            this.DiscontLabel.Location = new System.Drawing.Point(572, 46);
             this.DiscontLabel.Name = "DiscontLabel";
             this.DiscontLabel.Size = new System.Drawing.Size(65, 20);
             this.DiscontLabel.TabIndex = 12;
@@ -238,10 +243,10 @@ namespace CreditsWindowsForms
             // RubLabel
             // 
             this.RubLabel.AutoSize = true;
-            this.RubLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.RubLabel.Location = new System.Drawing.Point(205, 16);
+            this.RubLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.RubLabel.Location = new System.Drawing.Point(292, 22);
             this.RubLabel.Name = "RubLabel";
-            this.RubLabel.Size = new System.Drawing.Size(38, 20);
+            this.RubLabel.Size = new System.Drawing.Size(58, 29);
             this.RubLabel.TabIndex = 10;
             this.RubLabel.Text = "руб.";
             // 
@@ -249,7 +254,7 @@ namespace CreditsWindowsForms
             // 
             this.ProductTypeLabel.AutoSize = true;
             this.ProductTypeLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.ProductTypeLabel.Location = new System.Drawing.Point(345, 15);
+            this.ProductTypeLabel.Location = new System.Drawing.Point(1069, 10);
             this.ProductTypeLabel.Name = "ProductTypeLabel";
             this.ProductTypeLabel.Size = new System.Drawing.Size(111, 20);
             this.ProductTypeLabel.TabIndex = 9;
@@ -258,7 +263,7 @@ namespace CreditsWindowsForms
             // ProductTypeCB
             // 
             this.ProductTypeCB.FormattingEnabled = true;
-            this.ProductTypeCB.Location = new System.Drawing.Point(459, 15);
+            this.ProductTypeCB.Location = new System.Drawing.Point(1183, 10);
             this.ProductTypeCB.Name = "ProductTypeCB";
             this.ProductTypeCB.Size = new System.Drawing.Size(121, 21);
             this.ProductTypeCB.TabIndex = 2;
@@ -267,9 +272,9 @@ namespace CreditsWindowsForms
             // PeriodCB
             // 
             this.PeriodCB.FormattingEnabled = true;
-            this.PeriodCB.Location = new System.Drawing.Point(1181, 14);
+            this.PeriodCB.Location = new System.Drawing.Point(1184, 45);
             this.PeriodCB.Name = "PeriodCB";
-            this.PeriodCB.Size = new System.Drawing.Size(121, 21);
+            this.PeriodCB.Size = new System.Drawing.Size(120, 21);
             this.PeriodCB.TabIndex = 5;
             this.PeriodCB.SelectedIndexChanged += new System.EventHandler(this.PeriodCB_SelectedIndexChanged);
             // 
@@ -277,7 +282,7 @@ namespace CreditsWindowsForms
             // 
             this.PeriodLabel.AutoSize = true;
             this.PeriodLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.PeriodLabel.Location = new System.Drawing.Point(1132, 13);
+            this.PeriodLabel.Location = new System.Drawing.Point(1137, 44);
             this.PeriodLabel.Name = "PeriodLabel";
             this.PeriodLabel.Size = new System.Drawing.Size(46, 20);
             this.PeriodLabel.TabIndex = 6;
@@ -287,7 +292,7 @@ namespace CreditsWindowsForms
             // 
             this.ProductLabel.AutoSize = true;
             this.ProductLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.ProductLabel.Location = new System.Drawing.Point(927, 14);
+            this.ProductLabel.Location = new System.Drawing.Point(928, 45);
             this.ProductLabel.Name = "ProductLabel";
             this.ProductLabel.Size = new System.Drawing.Size(74, 20);
             this.ProductLabel.TabIndex = 5;
@@ -297,7 +302,7 @@ namespace CreditsWindowsForms
             // 
             this.BankLabel.AutoSize = true;
             this.BankLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.BankLabel.Location = new System.Drawing.Point(751, 15);
+            this.BankLabel.Location = new System.Drawing.Point(740, 46);
             this.BankLabel.Name = "BankLabel";
             this.BankLabel.Size = new System.Drawing.Size(46, 20);
             this.BankLabel.TabIndex = 4;
@@ -306,21 +311,21 @@ namespace CreditsWindowsForms
             // CostNumericUpDown
             // 
             this.CostNumericUpDown.AllowDrop = true;
-            this.CostNumericUpDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.CostNumericUpDown.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.CostNumericUpDown.Increment = new decimal(new int[] {
             500,
             0,
             0,
             0});
             this.CostNumericUpDown.InterceptArrowKeys = false;
-            this.CostNumericUpDown.Location = new System.Drawing.Point(103, 14);
+            this.CostNumericUpDown.Location = new System.Drawing.Point(159, 22);
             this.CostNumericUpDown.Maximum = new decimal(new int[] {
             1000000,
             0,
             0,
             0});
             this.CostNumericUpDown.Name = "CostNumericUpDown";
-            this.CostNumericUpDown.Size = new System.Drawing.Size(101, 26);
+            this.CostNumericUpDown.Size = new System.Drawing.Size(128, 35);
             this.CostNumericUpDown.TabIndex = 1;
             this.CostNumericUpDown.ThousandsSeparator = true;
             this.CostNumericUpDown.UpDownAlign = System.Windows.Forms.LeftRightAlignment.Left;
@@ -330,15 +335,16 @@ namespace CreditsWindowsForms
             0,
             0});
             this.CostNumericUpDown.ValueChanged += new System.EventHandler(this.SumTB_TextChanged);
+            this.CostNumericUpDown.Paint += new System.Windows.Forms.PaintEventHandler(this.CostNumericUpDown_Paint);
             this.CostNumericUpDown.KeyDown += new System.Windows.Forms.KeyEventHandler(this.SumNumericUpDown_KeyDown);
             // 
             // CostLabel
             // 
             this.CostLabel.AutoSize = true;
-            this.CostLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
-            this.CostLabel.Location = new System.Drawing.Point(4, 15);
+            this.CostLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.CostLabel.Location = new System.Drawing.Point(13, 22);
             this.CostLabel.Name = "CostLabel";
-            this.CostLabel.Size = new System.Drawing.Size(93, 20);
+            this.CostLabel.Size = new System.Drawing.Size(140, 29);
             this.CostLabel.TabIndex = 1;
             this.CostLabel.Text = "Стоимость";
             // 
@@ -352,7 +358,7 @@ namespace CreditsWindowsForms
             this.calculatorDataGridView.Name = "calculatorDataGridView";
             this.calculatorDataGridView.ReadOnly = true;
             this.calculatorDataGridView.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.calculatorDataGridView.Size = new System.Drawing.Size(1318, 509);
+            this.calculatorDataGridView.Size = new System.Drawing.Size(1319, 373);
             this.calculatorDataGridView.TabIndex = 0;
             this.calculatorDataGridView.SelectionChanged += new System.EventHandler(this.СalculatorDataGridView_SelectionChanged);
             // 
@@ -455,16 +461,36 @@ namespace CreditsWindowsForms
             this.dgEditDB.TabIndex = 0;
             this.dgEditDB.CurrentCellChanged += new System.EventHandler(this.DgEditDB_CurrentCellChanged);
             // 
-            // Form1
+            // PartnerCB
+            // 
+            this.PartnerCB.FormattingEnabled = true;
+            this.PartnerCB.Location = new System.Drawing.Point(750, 12);
+            this.PartnerCB.Name = "PartnerCB";
+            this.PartnerCB.Size = new System.Drawing.Size(296, 21);
+            this.PartnerCB.TabIndex = 14;
+            this.PartnerCB.SelectedIndexChanged += new System.EventHandler(this.PartnerCB_SelectedIndexChanged);
+            // 
+            // PartnerLabal
+            // 
+            this.PartnerLabal.AutoSize = true;
+            this.PartnerLabal.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.PartnerLabal.Location = new System.Drawing.Point(568, 11);
+            this.PartnerLabal.Name = "PartnerLabal";
+            this.PartnerLabal.Size = new System.Drawing.Size(179, 20);
+            this.PartnerLabal.TabIndex = 15;
+            this.PartnerLabal.Text = "Торговая организация";
+            // 
+            // CreditWorker
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1332, 630);
+            this.ClientSize = new System.Drawing.Size(1333, 515);
             this.Controls.Add(this.tabControl);
             this.Controls.Add(this.menuStrip1);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MainMenuStrip = this.menuStrip1;
-            this.Name = "Form1";
-            this.Text = "Form1";
+            this.Name = "CreditWorker";
+            this.Text = "CreditWorker";
             this.Load += new System.EventHandler(this.Form1_Load);
             this.contextMenuStrip1.ResumeLayout(false);
             this.menuStrip1.ResumeLayout(false);
@@ -525,6 +551,8 @@ namespace CreditsWindowsForms
         private System.Windows.Forms.NumericUpDown DiscontNumericUpDown;
         private System.Windows.Forms.Label DiscontLabel;
         private System.Windows.Forms.Label RubLabel;
+        private System.Windows.Forms.ComboBox PartnerCB;
+        private System.Windows.Forms.Label PartnerLabal;
     }
 }
 
